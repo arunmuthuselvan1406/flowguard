@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlowGuard · Operations intelligence on Exasol</title>
+<style>
+  :root{
+    --navy:#0f1b3d; --teal:#1f9d8a; --teal-bg:#b9e0db; --teal-line:#7cc2b8;
+    --blue:#5b8def; --bg:#f5f8fd; --card:#ffffff; --muted:#5a6784;
+    --red:#e5484d; --amber:#f5a524; --green:#2fa36b;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);color:var(--navy);background:linear-gradient(180deg,#eef3fb 0%,#fff 40%);line-height:1.55}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .mono{font-family:var(--mono)}
+  .eyebrow{font-family:var(--mono);letter-spacing:.25em;color:var(--teal);font-weight:700;font-size:.85rem;text-transform:uppercase}
+
+  nav{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid #e3e9f4}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .logo{font-weight:800;font-size:1.15rem;display:flex;gap:8px;align-items:center}
+  .logo i{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--blue),var(--teal));display:inline-block}
+  nav ul{display:flex;gap:22px;list-style:none;font-size:.92rem;color:var(--muted)}
+  nav ul a:hover{color:var(--navy)}
+  @media(max-width:640px){nav ul{display:none}}
+
+  .hero{padding:80px 0 50px;text-align:left}
+  .hero h1{font-size:clamp(2.2rem,5.5vw,3.8rem);line-height:1.08;margin:14px 0 18px;letter-spacing:-.02em;max-width:800px}
+  .hero h1 span{background:linear-gradient(90deg,var(--blue),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.lead{font-size:1.2rem;color:var(--muted);max-width:640px}
+  .btns{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+  .btn{padding:12px 22px;border-radius:12px;font-weight:600;border:1px solid var(--navy);cursor:pointer;font-size:.95rem;background:#fff;color:var(--navy);font-family:var(--sans)}
+  .btn.primary{background:var(--navy);color:#fff}
+  .btn.primary:hover{background:#1c2c5c}
+  .btn.small{padding:8px 14px;font-size:.85rem}
+
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:44px}
+  .chip{background:var(--teal-bg);border:1.5px solid var(--teal-line);color:var(--teal);font-family:var(--mono);font-weight:600;font-size:.9rem;padding:16px 18px;border-radius:26px}
+  .chip small{display:block;color:var(--navy);font-family:var(--sans);font-weight:500;margin-top:4px;font-size:.82rem;opacity:.8}
+
+  section{padding:60px 0}
+  h2{font-size:clamp(1.6rem,3.5vw,2.3rem);letter-spacing:-.01em;margin:8px 0 10px}
+  .sub{color:var(--muted);max-width:640px;margin-bottom:26px}
+
+  .card{background:var(--card);border:1px solid #dfe6f3;border-radius:20px;box-shadow:0 10px 40px rgba(30,60,130,.07)}
+  .tabs{display:flex;gap:6px;padding:12px;border-bottom:1px solid #e8edf7;overflow-x:auto}
+  .tab{padding:10px 16px;border-radius:12px;border:none;background:transparent;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:var(--sans);font-size:.92rem}
+  .tab.active{background:var(--navy);color:#fff}
+  .panel{display:none;padding:26px}
+  .panel.active{display:block}
+  .panel h3{font-size:1.25rem;margin-bottom:4px}
+  .panel .desc{color:var(--muted);margin-bottom:18px;font-size:.95rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  select,input[type=range]{font-family:var(--sans);font-size:.92rem}
+  select{padding:9px 12px;border-radius:10px;border:1px solid #cdd7ea;background:#fff;color:var(--navy)}
+  .grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:24px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+  .bar-row{display:grid;grid-template-columns:120px 1fr 56px;gap:10px;align-items:center;margin:9px 0;font-size:.9rem}
+  .bar-row .name{font-family:var(--mono);font-size:.82rem}
+  .track{height:14px;background:#edf1f9;border-radius:8px;position:relative;overflow:hidden}
+  .fill{height:100%;border-radius:8px;transition:width .5s}
+  .tag{display:inline-block;font-family:var(--mono);font-size:.78rem;padding:4px 10px;border-radius:14px;background:#eef3fb;border:1px solid #d5def0;margin:3px 4px 3px 0}
+  .tag.hot{background:#fff1e0;border-color:#f7c986}
+  .callout{background:#f1f7ff;border:1px solid #cfe0fb;border-radius:14px;padding:14px 16px;font-size:.92rem;margin-top:14px}
+  .callout b{color:var(--teal)}
+
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid #edf1f9}
+  th{font-family:var(--mono);font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  td.pos{color:var(--green);font-weight:700} td.neg{color:var(--red);font-weight:700}
+  .move{padding:10px 12px;border-left:4px solid var(--teal);background:#f3fbf9;border-radius:8px;margin:8px 0;font-size:.9rem}
+
+  svg text{font-family:var(--mono);font-size:10px;fill:#5a6784}
+  .code{background:#0f1b3d;color:#d6e2ff;font-family:var(--mono);font-size:.8rem;padding:16px;border-radius:14px;overflow:auto;white-space:pre;line-height:1.5}
+  .pill-ok{color:var(--green);font-weight:700}
+  .pill-low{color:var(--amber);font-weight:700}
+
+  .arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:10px}
+  .node{padding:16px;border-radius:16px;background:#fff;border:1px solid #dfe6f3;text-align:center;font-size:.88rem}
+  .node b{display:block;font-family:var(--mono);color:var(--teal);font-size:.78rem;letter-spacing:.1em;margin-bottom:4px}
+  .node.core{background:var(--navy);color:#fff;border-color:var(--navy)} .node.core b{color:#8be9d8}
+
+  footer{padding:40px 0;color:var(--muted);font-size:.85rem;border-top:1px solid #e3e9f4;margin-top:40px}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a href="#top" class="logo"><i></i>FlowGuard</a>
+  <ul><li><a href="#demo">Live demo</a></li><li><a href="#how">Architecture</a></li><li><a href="#team">Team</a></li></ul>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <div class="eyebrow">Track 03 · Factories, Fleets &amp; Supply Chains</div>
+  <h1>Operational data is late, scattered and messy. <span>FlowGuard makes it useful.</span></h1>
+  <p class="lead">One analytics layer on Exasol that explains downtime, balances spare parts, catches defects early and normalises supplier data.</p>
+  <div class="btns">
+    <a class="btn primary" href="#demo">Try the demo</a>
+    <a class="btn" href="#how">See the architecture</a>
+  </div>
+  <div class="chips">
+    <div class="chip">Unplanned downtime with no clear root cause<small>→ RootCause</small></div>
+    <div class="chip">Spare parts held in the wrong location<small>→ PartsBalancer</small></div>
+    <div class="chip">Quality issues caught at the end of the line<small>→ EarlyCatch</small></div>
+    <div class="chip">Suppliers reporting in inconsistent formats<small>→ SupplierNormalizer</small></div>
+  </div>
+</div></header>
+
+<section id="demo"><div class="wrap">
+  <div class="eyebrow">Live demo · <span id="src">simulated data</span></div>
+  <h2>Four modules, one question each</h2>
+  <p class="sub">When the API is running, every view below is a SQL query on Exasol Personal. Opened as a plain file, the page falls back to built-in simulated data.</p>
+
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-p="p1">RootCause</button>
+      <button class="tab" data-p="p2">PartsBalancer</button>
+      <button class="tab" data-p="p3">EarlyCatch</button>
+      <button class="tab" data-p="p4">SupplierNormalizer</button>
+    </div>
+
+    <!-- 1 RootCause -->
+    <div class="panel active" id="p1">
+      <h3>Why did the line stop?</h3>
+      <p class="desc">Sensor readings in the 60 minutes before each stoppage, compared with that machine's normal baseline.</p>
+      <div class="row">
+        <label class="mono" style="font-size:.85rem">Stoppage:</label>
+        <select id="evSel"></select>
+      </div>
+      <div class="grid2">
+        <div><div class="mono" style="font-size:.75rem;color:var(--muted);margin-bottom:6px">DEVIATION FROM BASELINE (z-score)</div><div id="zbars"></div></div>
+        <div>
+          <div class="mono" style="font-size:.75rem;color:var(--muted);margin-bottom:6px">CO-OCCURRING EVENTS</div>
+          <div id="coevents"></div>
+          <div class="callout" id="verdict"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 Parts -->
+    <div class="panel" id="p2">
+      <h3>Are the parts where the failures are?</h3>
+      <p class="desc">Surplus = on-hand − expected 14-day demand − minimum level. Negative means a shortage is coming.</p>
+      <div class="row">
+        <label class="mono" style="font-size:.85rem">Part:</label>
+        <select id="partSel"></select>
+        <button class="btn small primary" id="rebalance">Suggest transfers</button>
+        <button class="btn small" id="resetParts">Reset</button>
+      </div>
+      <table id="partTable"></table>
+      <div id="moves"></div>
+    </div>
+
+    <!-- 3 EarlyCatch -->
+    <div class="panel" id="p3">
+      <h3>Catch the defect where it starts</h3>
+      <p class="desc">A key measurement tracked station by station. Control limits flag the first station that drifts, long before end-of-line inspection.</p>
+      <div class="row">
+        <label class="mono" style="font-size:.85rem">Production batch:</label>
+        <select id="batchSel"></select>
+      </div>
+      <svg id="spc" viewBox="0 0 640 240" width="100%"></svg>
+      <div class="callout" id="spcVerdict"></div>
+    </div>
+
+    <!-- 4 Supplier -->
+    <div class="panel" id="p4">
+      <h3>Any supplier format, one schema</h3>
+      <p class="desc">A column mapping is proposed for each incoming file (an LLM can be plugged in for unknown formats). A human approves it, and the normalised rows are loaded into Exasol.</p>
+      <div class="row">
+        <label class="mono" style="font-size:.85rem">Incoming file:</label>
+        <select id="supSel"></select>
+        <button class="btn small primary" id="proposeBtn">Propose mapping</button>
+      </div>
+      <div class="grid2">
+        <div><div class="mono" style="font-size:.75rem;color:var(--muted);margin-bottom:6px">RAW FILE</div><div id="rawTable"></div></div>
+        <div><div class="mono" style="font-size:.75rem;color:var(--muted);margin-bottom:6px">PROPOSED MAPPING</div><div id="mapTable"><span style="color:var(--muted);font-size:.9rem">Click "Propose mapping".</span></div></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn small primary" id="approveBtn" style="display:none">Approve &amp; load</button></div>
+      <div id="normOut"></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <div class="eyebrow">Architecture</div>
+  <h2>Compute stays in the database</h2>
+  <p class="sub">Raw data lands as-is with both <span class="mono">event_ts</span> and <span class="mono">arrival_ts</span>, so late and out-of-order data is handled, not hidden.</p>
+  <div class="arch">
+    <div class="node"><b>SOURCES</b>Sensors, ERP, supplier files</div>
+    <div class="node"><b>INGEST</b>Python · pyexasol</div>
+    <div class="node core"><b>EXASOL</b>RAW → CORE schemas, SQL views</div>
+    <div class="node"><b>API</b>FastAPI</div>
+    <div class="node"><b>UI</b>This dashboard</div>
+  </div>
+  <div class="code" style="margin-top:20px">-- RootCause: z-score of each sensor in the 60 min before a stoppage
+SELECT d.event_id, r.sensor,
+       (AVG(r.value) - b.mu) / NULLIF(b.sd,0) AS z_score
+FROM core.downtime_events d
+JOIN core.sensor_readings r
+  ON r.machine_id = d.machine_id
+ AND r.event_ts BETWEEN ADD_MINUTES(d.start_ts,-60) AND d.start_ts
+JOIN core.baseline b ON b.machine_id = r.machine_id AND b.sensor = r.sensor
+GROUP BY d.event_id, r.sensor, b.mu, b.sd
+ORDER BY ABS(z_score) DESC;</div>
+</div></section>
+
+<section id="team"><div class="wrap">
+  <div class="eyebrow">Team</div>
+  <h2>Built for the Exasol AI Challenge</h2>
+  <p class="sub">Team The Vangaurd. Solo entry.</p>
+  <div class="chips">
+    <div class="chip" style="border-radius:18px">Arun Muthu Selvan K<small>Solo: Exasol SQL, API, dashboard, docs</small></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">FlowGuard · hackathon prototype · all data is synthetic. MIT licensed.</div></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+
+/* tabs */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  t.classList.add('active'); $('#'+t.dataset.p).classList.add('active');
+  if(t.dataset.p==='p3') drawSPC();
+});
+
+/* ---------- 1. RootCause ---------- */
+let events = [
+  { name:'Press-07 · Oct 28 02:14', z:{bearing_temp:4.8, vibration:3.1, motor_current:1.2, oil_pressure:-0.6, line_speed:0.3},
+    co:[['Supplier lot L-4471 installed (3 days earlier)',1],['Night shift',0],['Tool change 6h before',0]],
+    why:'Bearing temperature drifted ~4.8σ above baseline, followed by vibration. Bearings from lot L-4471 were fitted 3 days ago. Check the 3 other machines using that lot.' },
+  { name:'CNC-12 · Oct 29 14:40', z:{spindle_load:1.1, coolant_flow:-4.2, vibration:0.9, bearing_temp:2.0, line_speed:0.1},
+    co:[['Coolant filter overdue by 9 days',1],['Day shift',0]],
+    why:'Coolant flow dropped 4.2σ below normal and temperature rose after. The coolant filter maintenance is overdue; this is a preventable stop.' },
+  { name:'Conveyor-03 · Oct 30 06:05', z:{motor_current:3.6, belt_tension:-2.9, vibration:1.5, line_speed:-1.1, bearing_temp:0.4},
+    co:[['Shift change 20 min earlier',0],['Belt replaced 12 days ago',1]],
+    why:'Motor current rose while belt tension fell, which is typical of a slipping belt. The belt was replaced 12 days ago; check installation tension.' }
+];
+events.forEach((e,i)=>$('#evSel').add(new Option(e.name,i)));
+function renderRC(){
+  const e = events[$('#evSel').value];
+  const rows = Object.entries(e.z).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+  $('#zbars').innerHTML = rows.map(([k,v])=>{
+    const w = Math.min(100, Math.abs(v)/5*100);
+    const c = Math.abs(v)>=3 ? 'var(--red)' : Math.abs(v)>=2 ? 'var(--amber)' : '#9fb4de';
+    return `<div class="bar-row"><span class="name">${k}</span><div class="track"><div class="fill" style="width:${w}%;background:${c}"></div></div><span class="mono">${v>0?'+':''}${v.toFixed(1)}σ</span></div>`;
+  }).join('');
+  $('#coevents').innerHTML = e.co.map(([t,h])=>`<span class="tag ${h?'hot':''}">${t}</span>`).join('');
+  $('#verdict').innerHTML = '<b>Likely cause:</b> ' + e.why;
+}
+$('#evSel').onchange = renderRC; renderRC();
+
+/* ---------- 2. PartsBalancer ---------- */
+let partsBase = {
+  'Bearing 6204':[['Chennai',40,14,10],['Pune',6,18,8],['Hosur',22,6,8],['Coimbatore',3,9,6]],
+  'Hydraulic seal H9':[['Chennai',4,10,6],['Pune',30,5,8],['Hosur',12,4,5],['Coimbatore',25,6,6]],
+  'Servo drive S2':[['Chennai',9,4,3],['Pune',2,6,3],['Hosur',14,3,3],['Coimbatore',5,5,3]]
+};
+let parts = JSON.parse(JSON.stringify(partsBase));
+Object.keys(parts).forEach(p=>$('#partSel').add(new Option(p,p)));
+function renderParts(){
+  const p = $('#partSel').value;
+  $('#partTable').innerHTML = '<tr><th>Site</th><th>On hand</th><th>Demand 14d</th><th>Min</th><th>Surplus</th></tr>' +
+    parts[p].map(([s,oh,d,m])=>{const sp=oh-d-m;
+      return `<tr><td>${s}</td><td>${oh}</td><td>${d}</td><td>${m}</td><td class="${sp>=0?'pos':'neg'}">${sp>0?'+':''}${sp}</td></tr>`}).join('');
+}
+$('#partSel').onchange = ()=>{ $('#moves').innerHTML=''; renderParts(); };
+$('#rebalance').onclick = ()=>{
+  const p = $('#partSel').value, rows = parts[p];
+  const sur = rows.filter(r=>r[1]-r[2]-r[3]>0).sort((a,b)=>(b[1]-b[2]-b[3])-(a[1]-a[2]-a[3]));
+  const def = rows.filter(r=>r[1]-r[2]-r[3]<0).sort((a,b)=>(a[1]-a[2]-a[3])-(b[1]-b[2]-b[3]));
+  const moves=[];
+  def.forEach(d=>{
+    let need = -(d[1]-d[2]-d[3]);
+    sur.forEach(s=>{
+      const have = s[1]-s[2]-s[3];
+      if(need>0 && have>0){ const q=Math.min(need,have); s[1]-=q; d[1]+=q; need-=q; moves.push(`Move <b>${q}</b> × ${p}: ${s[0]} → ${d[0]}`); }
+    });
+  });
+  $('#moves').innerHTML = moves.length ? moves.map(m=>`<div class="move">${m}</div>`).join('') : '<div class="callout">No transfers needed.</div>';
+  renderParts();
+};
+$('#resetParts').onclick = ()=>{ parts = JSON.parse(JSON.stringify(partsBase)); $('#moves').innerHTML=''; renderParts(); };
+renderParts();
+
+/* ---------- 3. EarlyCatch ---------- */
+let batches = {
+  'Batch A-118 (drift at station 4)': [10.0,10.1,9.9,10.9,11.4,11.9,12.3,12.6,12.9],
+  'Batch A-119 (healthy)':            [10.0,9.9,10.1,10.0,10.2,9.9,10.1,10.0,10.1],
+  'Batch A-120 (sudden shift at 6)':  [10.1,10.0,9.9,10.1,10.0,11.8,12.0,11.9,12.1]
+};
+Object.keys(batches).forEach(b=>$('#batchSel').add(new Option(b,b)));
+let MU=10, SIG=0.45, UCL=MU+3*SIG, LCL=MU-3*SIG;
+function drawSPC(){
+  const v = batches[$('#batchSel').value], W=640,H=240,pad=34;
+  const y = val => H-pad-((val-8.5)/(14-8.5))*(H-2*pad);
+  const x = i => pad+i*((W-2*pad)/8);
+  let s = '';
+  [[UCL,'UCL'],[MU,'mean'],[LCL,'LCL']].forEach(([l,t])=>{
+    s += `<line x1="${pad}" x2="${W-pad}" y1="${y(l)}" y2="${y(l)}" stroke="${t==='mean'?'#9fb4de':'#e5484d'}" stroke-dasharray="${t==='mean'?'':'5 4'}"/><text x="${W-pad+4}" y="${y(l)+3}">${t}</text>`;
+  });
+  s += `<polyline fill="none" stroke="#1f9d8a" stroke-width="2.5" points="${v.map((a,i)=>x(i)+','+y(a)).join(' ')}"/>`;
+  const first = v.findIndex(a=>a>UCL||a<LCL);
+  v.forEach((a,i)=>{ s += `<circle cx="${x(i)}" cy="${y(a)}" r="${i===first?7:4}" fill="${(a>UCL||a<LCL)?'#e5484d':'#1f9d8a'}"/><text x="${x(i)-4}" y="${H-12}">S${i+1}</text>`; });
+  $('#spc').innerHTML = s;
+  $('#spcVerdict').innerHTML = first<0
+    ? '<b>No drift detected.</b> This batch is within control limits at every station.'
+    : `<b>Flagged at station ${first+1}</b> instead of waiting for end-of-line inspection at station 9. That is ${9-(first+1)} stations of work saved per affected unit.`;
+}
+$('#batchSel').onchange = drawSPC; drawSPC();
+
+/* ---------- 4. SupplierNormalizer ---------- */
+const files = {
+  'AlphaMetals.csv (EU)': {
+    cols:['Lieferant','Teilenr','Menge','Versanddatum','Preis_EUR'],
+    rows:[['ALPHA-01','BR-6204','120','28.10.2026','4,20'],['ALPHA-01','SL-H9','60','29.10.2026','11,80']],
+    map:{supplier_id:['Lieferant','none',.97],part_id:['Teilenr','none',.95],qty:['Menge','none',.99],ship_date:['Versanddatum','date_dmy',.93],unit_cost_usd:['Preis_EUR','eur_to_usd',.88]}
+  },
+  'BetaTools.xlsx (US)': {
+    cols:['vendor','sku','units_shipped','ship_dt','cost_each_usd'],
+    rows:[['BETA-22','BR-6204','80','10/28/2026','4.55'],['BETA-22','SD-S2','15','10/30/2026','212.00']],
+    map:{supplier_id:['vendor','none',.96],part_id:['sku','none',.94],qty:['units_shipped','none',.98],ship_date:['ship_dt','date_mdy',.91],unit_cost_usd:['cost_each_usd','none',.97]}
+  },
+  'GammaParts.csv (cryptic)': {
+    cols:['V','P#','Q','D','C'],
+    rows:[['GAMMA-9','SL-H9','40','2026-10-27','12.10'],['GAMMA-9','BR-6204','200','2026-10-29','4.10']],
+    map:{supplier_id:['V','none',.62],part_id:['P#','none',.71],qty:['Q','none',.66],ship_date:['D','none',.84],unit_cost_usd:['C','none',.58]}
+  }
+};
+Object.keys(files).forEach(f=>$('#supSel').add(new Option(f,f)));
+const tbl = (cols,rows)=>`<table><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
+function renderRaw(){
+  const f = files[$('#supSel').value];
+  $('#rawTable').innerHTML = tbl(f.cols,f.rows);
+  $('#mapTable').innerHTML = '<span style="color:var(--muted);font-size:.9rem">Click "Propose mapping".</span>';
+  $('#approveBtn').style.display='none'; $('#normOut').innerHTML='';
+}
+$('#supSel').onchange = renderRaw; renderRaw();
+$('#proposeBtn').onclick = ()=>{
+  const f = files[$('#supSel').value];
+  $('#mapTable').innerHTML = '<table><tr><th>Canonical</th><th>Source</th><th>Transform</th><th>Conf.</th></tr>' +
+    Object.entries(f.map).map(([k,[src,tf,c]])=>`<tr><td class="mono">${k}</td><td class="mono">${src}</td><td class="mono">${tf}</td><td class="${c>=.8?'pill-ok':'pill-low'}">${Math.round(c*100)}%</td></tr>`).join('') + '</table>' +
+    (Object.values(f.map).some(m=>m[2]<.8) ? '<div class="callout">Some mappings have low confidence. A human should review them before approval.</div>' : '');
+  $('#approveBtn').style.display='inline-block';
+};
+const conv = {
+  none:v=>v,
+  date_dmy:v=>{const [d,m,y]=v.split('.');return `${y}-${m}-${d}`},
+  date_mdy:v=>{const [m,d,y]=v.split('/');return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`},
+  eur_to_usd:v=>(parseFloat(v.replace(',','.'))*1.08).toFixed(2)
+};
+$('#approveBtn').onclick = ()=>{
+  const f = files[$('#supSel').value], keys = Object.keys(f.map);
+  const rows = f.rows.map(r=>keys.map(k=>{const [src,tf]=f.map[k]; return conv[tf](r[f.cols.indexOf(src)]);}));
+  $('#normOut').innerHTML = '<div class="mono" style="font-size:.75rem;color:var(--muted);margin:10px 0 6px">CANONICAL TABLE · core.supplier_shipments</div>' + tbl(keys,rows) +
+    '<div class="callout"><b>Mapping approved.</b> <span id="loadMsg">Loading…</span></div>';
+  $('#approveBtn').style.display='none';
+  fetch('/api/suppliers/load',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(rows.map(r=>Object.fromEntries(keys.map((k,i)=>[k,r[i]]))))})
+    .then(r=>r.ok?r.json():Promise.reject())
+    .then(j=>{$('#loadMsg').textContent='Loaded '+j.loaded+' rows into core.supplier_shipments on Exasol.'})
+    .catch(()=>{$('#loadMsg').textContent='API not reachable: preview only, nothing was written.'});
+};
+
+/* ---------- live mode: replace simulated data with Exasol-backed API data ---------- */
+async function loadLive(){
+  try{
+    const [ev, pt, ec] = await Promise.all(['/api/rootcause','/api/parts','/api/earlycatch'].map(u=>fetch(u).then(r=>r.ok?r.json():Promise.reject())));
+    events = ev; partsBase = pt; parts = JSON.parse(JSON.stringify(pt));
+    batches = ec.batches; MU = ec.mu; SIG = ec.sigma; UCL = MU+3*SIG; LCL = MU-3*SIG;
+    $('#evSel').innerHTML=''; events.forEach((e,i)=>$('#evSel').add(new Option(e.name,i)));
+    $('#partSel').innerHTML=''; Object.keys(parts).forEach(p=>$('#partSel').add(new Option(p,p)));
+    $('#batchSel').innerHTML=''; Object.keys(batches).forEach(b=>$('#batchSel').add(new Option(b,b)));
+    $('#moves').innerHTML=''; renderRC(); renderParts(); drawSPC();
+    $('#src').textContent = 'live from Exasol Personal';
+  }catch(e){ /* no API: keep simulated data */ }
+}
+loadLive();
+</script>
+</body>
+</html>
