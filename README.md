@@ -5,7 +5,9 @@ that explains downtime, balances spare parts, catches defects early and normalis
 All computation happens in SQL inside Exasol. A thin FastAPI layer and a single-page dashboard sit on top.
 
 Built for the Exasol AI Challenge, Track 03: Factories, Fleets & Supply Chains. Team The Vangaurd (solo entry: Arun Muthu Selvan K). MIT licensed.
+   **Demo video:** https://github.com/arunmuthuselvan1406/flowguard/raw/main/flowguard_demo.mp4
 
+   **Pitch deck:** https://github.com/arunmuthuselvan1406/flowguard/blob/main/docs/FlowGuard_Pitch_Deck.pptx
 ## The four modules
 
 | Module | Question it answers | How it works (in Exasol) |
